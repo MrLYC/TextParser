@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from collections import deque
+from contextlib import contextmanager
 
 from .model import (
     Context, Item, ContantItem, TemplateItem, RegexExprItem,
@@ -26,6 +27,49 @@ class ItemFactory(object):
         return type_class(type=type, **kwargs)
 
 
+class ParseOrdering(object):
+
+    def __init__(self, items):
+        self.items = []
+        self.item_mappings = {
+            i.name: i for i in items
+        }
+        self.solved_set = set()
+        self.checking_set = set()
+
+    @contextmanager
+    def checking_item(self, item):
+        if item.name in self.checking_set:
+            raise CircularRefParseError(item.name)
+        try:
+            yield self.checking_set.add(item.name)
+        finally:
+            self.checking_set.remove(item.name)
+
+    def check_item(self, item):
+        if item.name in self.solved_set:
+            return True
+        with self.checking_item(item):
+            for i in item.dependencies:
+                if (
+                    i not in self.solved_set
+                    and not self.check_item(self.item_mappings[i])
+                ):
+                    return False
+            return True
+
+    def check(self):
+        for i in self.item_mappings.values():
+            if self.check_item(i):
+                self.solved_set.add(i.name)
+                self.items.append(i)
+
+    def __iter__(self):
+        if not self.items:
+            self.check()
+        return iter(self.items)
+
+
 class BaseParser(object):
 
     def __init__(self, items=None):
@@ -46,7 +90,7 @@ class BaseParser(object):
     def feed(self, content):
         context = self.context
         context.input = content
-        items = deque(self.items)
+        items = deque(ParseOrdering(self.items))
         while items:
             item = items.pop()
             if item.can_evaluate():
