@@ -87,18 +87,36 @@ class BaseParser(object):
             return True
         return False
 
+    def get_context(self, content):
+        return Context(input=content, items={
+            item.name: item
+            for item in self.items
+        })
+
     def parse(self, content):
         raise NotImplementedError()
 
 
-class SmartParseMixin:
+class ContextOptimizeMixin(object):
+
+    def optimize_context(self, context):
+        ordering_items = [
+            (i.name, i)
+            for i in ParseOrdering(context)
+        ]
+        context.set_items(ordering_items)
+        return context
+
+    def get_context(self, content):
+        context = super(ContextOptimizeMixin, self).get_context(content)
+        return self.optimize_context(context)
+
+
+class SmartParseMixin(object):
 
     def parse(self, content):
-        context = Context(input=content, items={
-            item.name: item
-            for item in self.items
-        })
-        items = deque(ParseOrdering(context))
+        context = self.get_context(content)
+        items = deque(context.items.values())
         if not items:
             return
 
@@ -118,13 +136,11 @@ class SmartParseMixin:
         return context
 
 
-class SimpleParseMixin:
+class SimpleParseMixin(object):
 
     def parse(self, content):
-        context = Context(input=content, items={
-            item.name: item
-            for item in self.items
-        })
-        for item in self.items:
+        context = self.get_context(content)
+        for name, item in context.items.items():
             if not self.try_evaluate(context, item):
-                raise ParseValueError(item.name)
+                raise ParseValueError(name)
+        return context

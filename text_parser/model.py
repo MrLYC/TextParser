@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 import re
+from collections import OrderedDict
 
 from .utils import (
     undefined, force_text,
@@ -13,8 +14,11 @@ class Context(object):
 
     def __init__(self, input=None, items=None, values=None):
         self.input = input
-        self.items = items or {}
         self.values = values or {}
+        self.set_items(items)
+
+    def set_items(self, items):
+        self.items = OrderedDict(items or {})
 
 
 class Item(object):
