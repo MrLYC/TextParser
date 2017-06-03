@@ -155,3 +155,37 @@ class RegexExprItem(ExprItem):
         if not groups:
             return undefined
         return groups[0]
+
+
+class CSSSelectorExprItem(ExprItem):
+    TYPE = "css-selector"
+    DEFAULT_ATTRS = ExprItem.DEFAULT_ATTRS + (
+        ("type", TYPE),
+    )
+
+    def get_value(self, context):
+        from pyquery import PyQuery
+
+        input_ = self.get_input(context)
+        pyquery = PyQuery(input_)
+        return pyquery(self.value).text()
+
+
+class HTMLXPathExprItem(ExprItem):
+    TYPE = "xpath"
+    DEFAULT_ATTRS = ExprItem.DEFAULT_ATTRS + (
+        ("type", TYPE),
+    )
+
+    def get_value(self, context):
+        from lxml import etree, _Element as Element, tostring
+
+        input_ = self.get_input(context)
+        root = etree.HTML(input_)
+        result = root.xpath(self.value)
+        if not result:
+            return undefined
+        result = result[0]
+        if isinstance(result, Element):
+            return tostring(result)
+        return result

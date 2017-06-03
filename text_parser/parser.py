@@ -5,7 +5,8 @@ from collections import deque, OrderedDict
 from contextlib import contextmanager
 
 from .model import (
-    Context, Item, ContantItem, TemplateItem, RegexExprItem,
+    Context, Item, ContantItem, TemplateItem,
+    RegexExprItem, CSSSelectorExprItem, HTMLXPathExprItem,
 )
 from .utils import (
     CircularRefParseError, ReferenceParseError, ParseValueError,
@@ -18,6 +19,8 @@ class ItemFactory(object):
         ContantItem.TYPE: ContantItem,
         TemplateItem.TYPE: TemplateItem,
         RegexExprItem.TYPE: RegexExprItem,
+        CSSSelectorExprItem.TYPE: CSSSelectorExprItem,
+        HTMLXPathExprItem.TYPE: HTMLXPathExprItem,
     }
 
     @classmethod
