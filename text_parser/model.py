@@ -38,6 +38,12 @@ class Item(object):
 
         self.init()
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "<Item[{self.name}]: type={self.type}>".format(self=self)
+
     def init(self):
         pass
 

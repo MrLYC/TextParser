@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from collections import deque
+from collections import deque, OrderedDict
 from contextlib import contextmanager
 
 from .model import (
@@ -29,45 +29,51 @@ class ItemFactory(object):
 class ParseOrdering(object):
 
     def __init__(self, context):
-        self.items = []
+        self.solved_items = OrderedDict()
         self.context = context
-        self.item_mappings = context.items
-        self.solved_set = set()
-        self.checking_set = set()
+        self.dependencies = {}
 
-    @contextmanager
-    def checking_item(self, item):
-        if item.name in self.checking_set:
-            raise CircularRefParseError(item.name)
-        try:
-            yield self.checking_set.add(item.name)
-        finally:
-            self.checking_set.remove(item.name)
+        for name, item in context.items.items():
+            if not item.dependencies:
+                self.solved_items[name] = item
+            else:
+                self.dependencies[name] = deque(item.dependencies)
 
-    def check_item(self, item):
-        if item.name in self.solved_set:
-            return
-        with self.checking_item(item):
-            for i in item.dependencies:
-                if i in self.solved_set:
-                    continue
-                if i == item.name:
-                    raise CircularRefParseError(i)
-                dependency = self.item_mappings.get(i)
-                if not dependency:
-                    raise ReferenceParseError(i)
-                self.check_item(dependency)
+    def solve_dependencies(self, dependencies):
+        old_dependencies = tuple(dependencies)
+        solved_once = False
+        dependencies.clear()
+        for i in old_dependencies:
+            if i in self.solved_items:
+                solved_once = True
+                continue
+            if i not in self.dependencies:
+                raise ReferenceParseError(i)
+            dependencies.append(i)
+        return solved_once
+
+    def check_dependencies(self):
+        context = self.context
+        solved_once = False
+        for name, dependencies in tuple(self.dependencies.items()):
+            if not dependencies:
+                solved_once = True
+                self.solved_items[name] = context.items[name]
+                self.dependencies.pop(name)
+            else:
+                if self.solve_dependencies(dependencies):
+                    solved_once = True
+        return solved_once
 
     def check(self):
-        for i in self.item_mappings.values():
-            self.check_item(i)
-            self.solved_set.add(i.name)
-            self.items.append(i)
+        while self.dependencies:
+            if not self.check_dependencies():
+                raise CircularRefParseError()
 
     def __iter__(self):
-        if not self.items:
+        if self.dependencies:
             self.check()
-        return iter(self.items)
+        return iter(self.solved_items.values())
 
 
 class BaseParser(object):
@@ -80,6 +86,12 @@ class BaseParser(object):
             context.values[item.name] = item.evaluate_string(context)
             return True
         return False
+
+    def parse(self, content):
+        raise NotImplementedError()
+
+
+class SmartParseMixin:
 
     def parse(self, content):
         context = Context(input=content, items={
@@ -104,3 +116,15 @@ class BaseParser(object):
                 items.appendleft(item)
 
         return context
+
+
+class SimpleParseMixin:
+
+    def parse(self, content):
+        context = Context(input=content, items={
+            item.name: item
+            for item in self.items
+        })
+        for item in self.items:
+            if not self.try_evaluate(context, item):
+                raise ParseValueError(item.name)
