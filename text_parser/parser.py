@@ -2,7 +2,6 @@
 # encoding: utf-8
 
 from collections import deque, OrderedDict
-from contextlib import contextmanager
 
 from .model import (
     Context, Item, ContantItem, TemplateItem,
@@ -115,7 +114,7 @@ class ContextOptimizeMixin(object):
         return self.optimize_context(context)
 
 
-class SmartParseMixin(object):
+class LoopParseMixin(object):
 
     def parse(self, content):
         context = self.get_context(content)
@@ -147,3 +146,23 @@ class SimpleParseMixin(object):
             if not self.try_evaluate(context, item):
                 raise ParseValueError(name)
         return context
+
+
+class ContextOptimizeBaseParser(ContextOptimizeMixin, BaseParser):
+    pass
+
+
+class SimpleParser(SimpleParseMixin, BaseParser):
+    pass
+
+
+class QuickParser(SimpleParseMixin, ContextOptimizeBaseParser):
+    pass
+
+
+class SimpleLoopParser(LoopParseMixin, BaseParser):
+    pass
+
+
+class LoopParser(LoopParseMixin, ContextOptimizeBaseParser):
+    pass
