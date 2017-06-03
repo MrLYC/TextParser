@@ -8,7 +8,7 @@ from .model import (
     Context, Item, ContantItem, TemplateItem, RegexExprItem,
 )
 from .utils import (
-    CircularRefParseError, ReferenceParseError,
+    CircularRefParseError, ReferenceParseError, ParseValueError,
 )
 
 
@@ -75,16 +75,32 @@ class BaseParser(object):
     def __init__(self, items=None):
         self.items = items or []
 
+    def try_evaluate(self, context, item):
+        if item.can_evaluate(context):
+            context.values[item.name] = item.evaluate_string(context)
+            return True
+        return False
+
     def parse(self, content):
         context = Context(input=content, items={
             item.name: item
             for item in self.items
         })
         items = deque(ParseOrdering(context))
+        if not items:
+            return
+
+        sentry = None
         while items:
             item = items.pop()
-            if item.can_evaluate(context):
-                context.values[item.name] = item.evaluate_string(context)
+            if self.try_evaluate(context, item):
+                if item is sentry:
+                    sentry = None
             else:
+                if item is sentry:
+                    raise ParseValueError(item.name)
+                elif not sentry:
+                    sentry = item
                 items.appendleft(item)
+
         return context
