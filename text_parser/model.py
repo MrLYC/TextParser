@@ -20,8 +20,6 @@ class Context(object):
 class Item(object):
     TYPE = ""
     DEFAULT_ATTRS = (
-        ("context", None),
-
         ("default", undefined),
         ("input", None),
         ("type", TYPE),
@@ -29,9 +27,8 @@ class Item(object):
     )
 
     def __init__(self, value, dependencies=None, **kwargs):
-        self.context = None
         self.value = value
-        self.set_dependencies(dependencies)
+        self.dependencies = dependencies or []
 
         params = dict(self.DEFAULT_ATTRS)
         params.update(kwargs)
@@ -44,39 +41,24 @@ class Item(object):
     def init(self):
         pass
 
-    def set_context(self, context):
-        self.context = context
-
-    def set_dependencies(self, dependencies):
-        self.dependencies = tuple(dependencies or ())
-        if not self.dependencies:
-            return
-
-        context_items = self.context.items
-        for i in self.dependencies:
-            if i == self.name:
-                raise CircularRefParseError(i)
-            if i not in context_items:
-                raise ReferenceParseError(i)
-
-    def can_evaluate(self):
-        context_values = self.context.values
+    def can_evaluate(self, context):
+        context_values = context.values
         for i in self.dependencies:
             if i not in context_values:
                 return False
         return True
 
-    def get_value(self):
+    def get_value(self, context):
         return self.default
 
-    def evaluate(self):
-        value = self.get_value()
+    def evaluate(self, context):
+        value = self.get_value(context)
         if value is undefined:
             raise ParseValueError(self.name)
         return value
 
-    def to_string(self):
-        return force_text(self.evaluate())
+    def evaluate_string(self, context):
+        return force_text(self.evaluate(context))
 
 
 class ContantItem(Item):
@@ -85,7 +67,7 @@ class ContantItem(Item):
         ("type", TYPE),
     )
 
-    def get_value(self):
+    def get_value(self, context):
         return self.value
 
 
@@ -99,10 +81,7 @@ class TemplateItem(Item):
 
     def init(self):
         self.template = self.VAR_REGEX.split(self.value)
-
-    def set_context(self, context):
-        super(TemplateItem, self).set_context(context)
-        self.set_dependencies(
+        self.dependencies.extend(
             var for is_var, var in self.iter_value()
             if is_var
         )
@@ -113,9 +92,9 @@ class TemplateItem(Item):
             yield is_var, part
             is_var = not is_var
 
-    def get_value(self):
+    def get_value(self, context):
         parts = []
-        values = self.context.values
+        values = context.values
         for is_var, part in self.iter_value():
             if is_var:
                 part = values.get(part)
@@ -128,11 +107,11 @@ class ExprItem(Item):
         ("pattern", None),
     )
 
-    def get_input(self):
+    def get_input(self, context):
         input_ = self.input
         if not input_:
-            return self.context.input
-        return self.context.values.get(input_, u"")
+            return context.input
+        return context.values.get(input_, u"")
 
 
 class RegexExprItem(ExprItem):
@@ -157,8 +136,8 @@ class RegexExprItem(ExprItem):
             flag |= v
         self.pattern = re.compile(self.value, flag)
 
-    def get_value(self):
-        input_ = self.get_input()
+    def get_value(self, context):
+        input_ = self.get_input(context)
         match = self.pattern.search(input_)
         if not match:
             return self.default

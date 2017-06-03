@@ -8,8 +8,7 @@ from .model import (
     Context, Item, ContantItem, TemplateItem, RegexExprItem,
 )
 from .utils import (
-    undefined,
-    ParseValueError, CircularRefParseError, ReferenceParseError,
+    CircularRefParseError, ReferenceParseError,
 )
 
 
@@ -29,11 +28,10 @@ class ItemFactory(object):
 
 class ParseOrdering(object):
 
-    def __init__(self, items):
+    def __init__(self, context):
         self.items = []
-        self.item_mappings = {
-            i.name: i for i in items
-        }
+        self.context = context
+        self.item_mappings = context.items
         self.solved_set = set()
         self.checking_set = set()
 
@@ -48,21 +46,23 @@ class ParseOrdering(object):
 
     def check_item(self, item):
         if item.name in self.solved_set:
-            return True
+            return
         with self.checking_item(item):
             for i in item.dependencies:
-                if (
-                    i not in self.solved_set
-                    and not self.check_item(self.item_mappings[i])
-                ):
-                    return False
-            return True
+                if i in self.solved_set:
+                    continue
+                if i == item.name:
+                    raise CircularRefParseError(i)
+                dependency = self.item_mappings.get(i)
+                if not dependency:
+                    raise ReferenceParseError(i)
+                self.check_item(dependency)
 
     def check(self):
         for i in self.item_mappings.values():
-            if self.check_item(i):
-                self.solved_set.add(i.name)
-                self.items.append(i)
+            self.check_item(i)
+            self.solved_set.add(i.name)
+            self.items.append(i)
 
     def __iter__(self):
         if not self.items:
@@ -74,26 +74,17 @@ class BaseParser(object):
 
     def __init__(self, items=None):
         self.items = items or []
-        context = self.context = Context(items={
+
+    def parse(self, content):
+        context = Context(input=content, items={
             item.name: item
-            for item in items
+            for item in self.items
         })
-
-        for item in self.items:
-            item.set_context(context)
-
-    def set_context(self, context):
-        self.context = context
-        for i in self.items:
-            i.set_context(context)
-
-    def feed(self, content):
-        context = self.context
-        context.input = content
-        items = deque(ParseOrdering(self.items))
+        items = deque(ParseOrdering(context))
         while items:
             item = items.pop()
-            if item.can_evaluate():
-                context.values[item.name] = item.evaluate()
+            if item.can_evaluate(context):
+                context.values[item.name] = item.evaluate_string(context)
             else:
                 items.appendleft(item)
+        return context
