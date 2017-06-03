@@ -83,8 +83,10 @@ class ContantItem(Item):
     TYPE = "contant"
     DEFAULT_ATTRS = Item.DEFAULT_ATTRS + (
         ("type", TYPE),
-        ("default", u""),
     )
+
+    def get_value(self):
+        return self.value
 
 
 class TemplateItem(Item):
