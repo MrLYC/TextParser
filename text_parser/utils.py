@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import six
+
 
 undefined = object()
 
@@ -21,7 +23,9 @@ class ParseValueError(ParseError):
     pass
 
 
-def force_text(obj):
-    if isinstance(obj, (str, unicode)):
+def force_text(obj, encoding="utf-8", errors="strict"):
+    if isinstance(obj, six.text_type):
         return obj
-    return unicode(obj)
+    if not isinstance(obj, six.binary_type):
+        obj = str(obj)
+    return obj.decode(encoding, errors)
