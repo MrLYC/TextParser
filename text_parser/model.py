@@ -19,6 +19,12 @@ class Context(object):
     def set_items(self, items):
         self.items = OrderedDict(items or {})
 
+    @classmethod
+    def from_item_list(cls, items, **kwargs):
+        return cls(items=[
+            (i.name, i) for i in items
+        ], **kwargs)
+
 
 class Item(object):
     TYPE = ""
@@ -26,7 +32,6 @@ class Item(object):
         ("default", undefined),
         ("input", None),
         ("type", TYPE),
-        ("name", ""),
     )
 
     def __init__(self, value, dependencies=None, name=None, **kwargs):
