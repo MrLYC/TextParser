@@ -14,6 +14,7 @@ class Context(object):
     def __init__(self, input=None, items=None, values=None):
         self.input = input
         self.values = values or {}
+        self.comments = OrderedDict()
         self.set_items(items)
 
     def set_items(self, items):
@@ -30,14 +31,19 @@ class Item(object):
     TYPE = ""
     DEFAULT_ATTRS = (
         ("default", undefined),
-        ("input", None),
         ("type", TYPE),
     )
 
-    def __init__(self, value, dependencies=None, name=None, **kwargs):
-        self.value = value
+    def __init__(
+        self, value, dependencies=None, name=None, input=None,
+        **kwargs
+    ):
         self.name = name or force_text(id(self))
-        self.dependencies = dependencies or []
+        self.value = value
+        self.input = input
+        self.dependencies = None
+
+        self.set_dependencies(dependencies)
 
         params = dict(self.DEFAULT_ATTRS)
         params.update(kwargs)
@@ -46,6 +52,18 @@ class Item(object):
             setattr(self, attr, val)
 
         self.init()
+
+    def add_comment(self, context, comment):
+        comments = context.comments.get(self.name)
+        if comments is None:
+            comments = context.comments[self.name] = []
+        comments.append(comment)
+
+    def set_dependencies(self, dependencies):
+        dependencies = list(dependencies or [])
+        if self.input:
+            dependencies.append(self.input)
+        self.dependencies = dependencies
 
     def __str__(self):
         return self.name
@@ -155,9 +173,11 @@ class RegexExprItem(ExprItem):
         input_ = self.get_input(context)
         match = self.pattern.search(input_)
         if not match:
+            self.add_comment(context, "pattern not found")
             return self.default
         groups = match.groups()
         if not groups:
+            self.add_comment(context, "groups not found")
             return self.default
         return groups[0]
 
@@ -183,14 +203,15 @@ class HTMLXPathExprItem(ExprItem):
     )
 
     def get_value(self, context):
-        from lxml import etree, _Element as Element, tostring
+        from lxml import etree
 
         input_ = self.get_input(context)
         root = etree.HTML(input_)
         result = root.xpath(self.value)
         if not result:
+            self.add_comment(context, "pattern not found")
             return self.default
         result = result[0]
-        if isinstance(result, Element):
-            return tostring(result)
+        if isinstance(result, etree._Element):
+            return etree.tostring(result)
         return result

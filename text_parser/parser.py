@@ -101,10 +101,9 @@ class BaseParser(object):
         return False
 
     def get_context(self, content):
-        return self.context or Context(input=content, items={
-            item.name: item
-            for item in self.items
-        })
+        return self.context or Context.from_item_list(
+            input=content, items=self.items,
+        )
 
     def parse(self, content):
         raise NotImplementedError()
@@ -135,7 +134,7 @@ class LoopParseMixin(object):
 
         sentry = None
         while items:
-            item = items.pop()
+            item = items.popleft()
             if self.try_evaluate(context, item):
                 if item is sentry:
                     sentry = None
