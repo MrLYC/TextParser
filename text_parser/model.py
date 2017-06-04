@@ -5,8 +5,7 @@ import re
 from collections import OrderedDict
 
 from .utils import (
-    undefined, force_text,
-    ParseValueError, CircularRefParseError, ReferenceParseError,
+    undefined, force_text, ParseValueError,
 )
 
 
@@ -19,6 +18,18 @@ class Context(object):
 
     def set_items(self, items):
         self.items = OrderedDict(items or {})
+
+    @classmethod
+    def from_item_list(cls, items, **kwargs):
+        return cls(items=[
+            (i.name, i) for i in items
+        ], **kwargs)
+
+    @classmethod
+    def from_yaml(cls, yaml_content):
+        import yaml
+        config = yaml.load(yaml_content)
+        return cls(**config)
 
 
 class Item(object):
@@ -153,7 +164,7 @@ class RegexExprItem(ExprItem):
             return self.default
         groups = match.groups()
         if not groups:
-            return undefined
+            return self.default
         return groups[0]
 
 
@@ -184,7 +195,7 @@ class HTMLXPathExprItem(ExprItem):
         root = etree.HTML(input_)
         result = root.xpath(self.value)
         if not result:
-            return undefined
+            return self.default
         result = result[0]
         if isinstance(result, Element):
             return tostring(result)

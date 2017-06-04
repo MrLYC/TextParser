@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from collections import deque, OrderedDict
+from contextlib import contextmanager
 
 from .model import (
     Context, Item, ContantItem, TemplateItem,
@@ -80,8 +81,18 @@ class ParseOrdering(object):
 
 class BaseParser(object):
 
-    def __init__(self, items=None):
+    def __init__(self, items=None, context=None):
         self.items = items or []
+        self.context = context
+
+    @contextmanager
+    def parse_context(self, context):
+        old_context = self.context
+        self.context = context
+        try:
+            yield
+        finally:
+            self.context = old_context
 
     def try_evaluate(self, context, item):
         if item.can_evaluate(context):
@@ -90,7 +101,7 @@ class BaseParser(object):
         return False
 
     def get_context(self, content):
-        return Context(input=content, items={
+        return self.context or Context(input=content, items={
             item.name: item
             for item in self.items
         })
