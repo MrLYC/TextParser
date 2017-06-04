@@ -19,18 +19,6 @@ class Context(object):
     def set_items(self, items):
         self.items = OrderedDict(items or {})
 
-    @classmethod
-    def from_item_list(cls, items, **kwargs):
-        return cls(items=[
-            (i.name, i) for i in items
-        ], **kwargs)
-
-    @classmethod
-    def from_yaml(cls, yaml_content):
-        import yaml
-        config = yaml.load(yaml_content)
-        return cls(**config)
-
 
 class Item(object):
     TYPE = ""
@@ -41,8 +29,9 @@ class Item(object):
         ("name", ""),
     )
 
-    def __init__(self, value, dependencies=None, **kwargs):
+    def __init__(self, value, dependencies=None, name=None, **kwargs):
         self.value = value
+        self.name = name or force_text(id(self))
         self.dependencies = dependencies or []
 
         params = dict(self.DEFAULT_ATTRS)
