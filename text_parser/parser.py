@@ -25,7 +25,9 @@ class ItemFactory(object):
 
     @classmethod
     def get_item(cls, type, **kwargs):
-        type_class = cls.ITEM_TYPE_MAPPINGS.get(type) or Item
+        type_class = cls.ITEM_TYPE_MAPPINGS.get(type)
+        if not type_class:
+            raise TypeError(type)
         return type_class(type=type, **kwargs)
 
 
@@ -107,6 +109,17 @@ class BaseParser(object):
 
     def parse(self, content):
         raise NotImplementedError()
+
+    @classmethod
+    def from_yaml(cls, yaml_content, *args, **kwargs):
+        import yaml
+
+        config = yaml.load(yaml_content)
+        items = [
+            ItemFactory.get_item(name=n, **i)
+            for n, i in config["items"].items()
+        ]
+        return cls(items=items, *args, **kwargs)
 
 
 class ContextOptimizeMixin(object):

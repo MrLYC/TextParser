@@ -1,12 +1,38 @@
 # encoding: utf-8
 
 import random
+from textwrap import dedent
 
 from unittest import TestCase
 
 from text_parser import model
 from text_parser import parser
 from text_parser import utils
+
+
+class TestBaseParser(TestCase):
+    def test_from_yaml(self):
+        p = parser.BaseParser.from_yaml(dedent('''
+        items:
+          title:
+            value: //title/text()
+            default: demo
+            type: xpath
+          info:
+            value: div.info
+            type: css-selector
+          value:
+            value: value:(.*?)
+            type: regex
+            input: info
+          group:
+            value: demo-value
+            type: contant
+          id:
+            value: ${group}-${value}
+            type: template
+        '''))
+        self.assert_(p.items)
 
 
 class TestParseOrdering(TestCase):
