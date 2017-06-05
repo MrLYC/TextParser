@@ -11,10 +11,13 @@ from .utils import (
 
 class Context(object):
 
-    def __init__(self, input=None, items=None, values=None):
+    def __init__(
+        self, input=None, items=None, values=None, parser=None,
+    ):
         self.input = input
         self.values = values or {}
         self.comments = OrderedDict()
+        self.parser = parser
         self.set_items(items)
 
     def set_items(self, items):
@@ -87,7 +90,7 @@ class Item(object):
     def evaluate(self, context):
         value = self.get_value(context)
         if value is undefined:
-            raise ParseValueError(self.name)
+            raise ParseValueError(context, self.name)
         return value
 
     def evaluate_string(self, context):

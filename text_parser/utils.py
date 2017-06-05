@@ -8,7 +8,9 @@ undefined = object()
 
 
 class ParseError(Exception):
-    pass
+    def __init__(self, context, *args, **kwargs):
+        super(ParseError, self).__init__(*args, **kwargs)
+        self.context = context
 
 
 class CircularRefParseError(ParseError):

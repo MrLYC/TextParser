@@ -51,7 +51,7 @@ class ParseOrdering(object):
                 solved_once = True
                 continue
             if i not in self.dependencies:
-                raise ReferenceParseError(i)
+                raise ReferenceParseError(self.context, i)
             dependencies.append(i)
         return solved_once
 
@@ -71,7 +71,7 @@ class ParseOrdering(object):
     def check(self):
         while self.dependencies:
             if not self.check_dependencies():
-                raise CircularRefParseError()
+                raise CircularRefParseError(self.context)
 
     def __iter__(self):
         if self.dependencies:
@@ -102,7 +102,7 @@ class BaseParser(object):
 
     def get_context(self, content):
         return self.context or Context.from_item_list(
-            input=content, items=self.items,
+            input=content, items=self.items, parser=self,
         )
 
     def parse(self, content):
@@ -140,7 +140,7 @@ class LoopParseMixin(object):
                     sentry = None
             else:
                 if item is sentry:
-                    raise ParseValueError(item.name)
+                    raise ParseValueError(context, item.name)
                 elif not sentry:
                     sentry = item
                 items.appendleft(item)
@@ -154,7 +154,7 @@ class SimpleParseMixin(object):
         context = self.get_context(content)
         for name, item in context.items.items():
             if not self.try_evaluate(context, item):
-                raise ParseValueError(name)
+                raise ParseValueError(context, name)
         return context
 
 
