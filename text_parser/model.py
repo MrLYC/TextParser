@@ -2,10 +2,11 @@
 # encoding: utf-8
 
 import re
+import datetime
 from collections import OrderedDict
 
 from .utils import (
-    undefined, force_text, ParseValueError,
+    undefined, force_text, ParseValueError, RegisterDict,
 )
 
 
@@ -26,9 +27,9 @@ class Context(object):
         self.items = OrderedDict(items or {})
 
     def add_comment(self, name, comment):
-        comments = context.comments.get(name)
+        comments = self.comments.get(name)
         if comments is None:
-            comments = context.comments.setdefault(name, [])
+            comments = self.comments.setdefault(name, [])
         comments.append(comment)
 
     @classmethod
@@ -223,3 +224,45 @@ class HTMLXPathExprItem(ExprItem):
         if isinstance(result, etree._Element):
             return etree.tostring(result)
         return result
+
+
+class FunctionExprItem(ExprItem):
+    TYPE = "function"
+    DEFAULT_ATTRS = ExprItem.DEFAULT_ATTRS + (
+        ("type", "TYPE"),
+    )
+    FUNCTIONS = RegisterDict()
+
+    def init(self):
+        self.function = self.FUNCTIONS.get(self.value)
+        if not self.function:
+            raise TypeError(self.value)
+
+    def get_value(self, context):
+        return self.function(self, context, self.get_input(context))
+
+    @FUNCTIONS.register("trim")
+    def func_trim(self, context, input_):
+        return input_.strip()
+
+    @FUNCTIONS.register("title")
+    def func_title(self, context, input_):
+        return input_.title()
+
+    @FUNCTIONS.register("upper")
+    def func_upper(self, context, input_):
+        return input_.upper()
+
+    @FUNCTIONS.register("lower")
+    def func_lower(self, context, input_):
+        return input_.lower()
+
+    @FUNCTIONS.register("now")
+    def func_now(self, context, input_):
+        now = datetime.datetime.now()
+        return now.isoformat()
+
+    @FUNCTIONS.register("today")
+    def func_today(self, context, input_):
+        today = datetime.date.today()
+        return today.isoformat()

@@ -19,3 +19,6 @@ class TestContext(TestCase):
 
         context = model.Context(input="", items=None, values={"a": 1})
         self.assertEqual(context.values["a"], 1)
+
+
+class Test

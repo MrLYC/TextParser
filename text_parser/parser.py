@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from .model import (
     Context, Item, ContantItem, TemplateItem,
     RegexExprItem, CSSSelectorExprItem, HTMLXPathExprItem,
+    FunctionExprItem,
 )
 from .utils import (
     CircularRefParseError, ReferenceParseError, ParseValueError,
@@ -21,6 +22,7 @@ class ItemFactory(object):
         RegexExprItem.TYPE: RegexExprItem,
         CSSSelectorExprItem.TYPE: CSSSelectorExprItem,
         HTMLXPathExprItem.TYPE: HTMLXPathExprItem,
+        FunctionExprItem.TYPE: FunctionExprItem,
     }
 
     @classmethod
