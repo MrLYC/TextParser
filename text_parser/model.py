@@ -13,15 +13,23 @@ class Context(object):
 
     def __init__(
         self, input=None, items=None, values=None, parser=None,
+        debug=False,
     ):
         self.input = input
         self.values = values or {}
         self.comments = OrderedDict()
         self.parser = parser
+        self.debug = debug
         self.set_items(items)
 
     def set_items(self, items):
         self.items = OrderedDict(items or {})
+
+    def add_comment(self, name, comment):
+        comments = context.comments.get(name)
+        if comments is None:
+            comments = context.comments.setdefault(name, [])
+        comments.append(comment)
 
     @classmethod
     def from_item_list(cls, items, **kwargs):
@@ -57,10 +65,7 @@ class Item(object):
         self.init()
 
     def add_comment(self, context, comment):
-        comments = context.comments.get(self.name)
-        if comments is None:
-            comments = context.comments[self.name] = []
-        comments.append(comment)
+        context.add_comment(self.name, comment)
 
     def set_dependencies(self, dependencies):
         dependencies = list(dependencies or [])

@@ -87,6 +87,10 @@ class BaseParser(object):
         self.items = items or []
         self.context = context
 
+    @property
+    def name(self):
+        return "$%s-%s" % (self.__class__, id(self))
+
     @contextmanager
     def parse_context(self, context):
         old_context = self.context
@@ -96,10 +100,18 @@ class BaseParser(object):
         finally:
             self.context = old_context
 
+    def add_comment(self, context, comment):
+        context.add_comment(self.name, comment)
+
     def try_evaluate(self, context, item):
         if item.can_evaluate(context):
-            context.values[item.name] = item.evaluate_string(context)
+            result = item.evaluate_string(context)
+            context.values[item.name] = result
+            if context.debug:
+                self.add_comment(context, "!!result: %s" % result)
             return True
+        elif context.debug:
+            self.add_comment(context, "!!skiped: %s" % item.name)
         return False
 
     def get_context(self, content):
