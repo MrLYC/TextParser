@@ -27,7 +27,7 @@ class TestParseOrdering(TestCase):
 
     def test_check2(self):
         context = model.Context.from_item_list([
-            model.RegexExprItem("(\w*?)", name="title", input="value"),
+            model.RegexExprItem(r"(\w*?)", name="title", input="value"),
             model.ContantItem("test", name="value"),
         ])
         parse_ordering = parser.ParseOrdering(context)
