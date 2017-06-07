@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+
+import re
 from collections import deque, OrderedDict
 from contextlib import contextmanager
+
+import six
 
 from .model import (
     Context, Item, ContantItem, TemplateItem,
@@ -123,6 +127,18 @@ class BaseParser(object):
 
     def parse(self, content):
         raise NotImplementedError()
+
+    def isplit_and_parse(self, content, regex):
+        if isinstance(regex, six.string_types):
+            regex = re.compile(regex)
+
+        for part in regex.split(content):
+            error = None
+            try:
+                context = self.parse(part)
+            except Exception as error:
+                pass
+            yield error, context
 
     @classmethod
     def from_yaml(cls, yaml_content, *args, **kwargs):
