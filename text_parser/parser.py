@@ -141,15 +141,18 @@ class BaseParser(object):
             yield error, context
 
     @classmethod
-    def from_yaml(cls, yaml_content, *args, **kwargs):
-        import yaml
-
-        config = yaml.load(yaml_content)
+    def from_config(cls, config, *args, **kwargs):
         items = [
             ItemFactory.get_item(name=n, **i)
-            for n, i in config["items"].items()
+            for n, i in config.items()
         ]
         return cls(items=items, *args, **kwargs)
+
+    @classmethod
+    def from_yaml(cls, yaml_content, *args, **kwargs):
+        import yaml
+        config = yaml.load(yaml_content)
+        return cls.from_config(config["items"])
 
 
 class ContextOptimizeMixin(object):
@@ -209,7 +212,7 @@ class SimpleParser(SimpleParseMixin, BaseParser):
     pass
 
 
-class QuickParser(SimpleParseMixin, ContextOptimizeBaseParser):
+class FastParser(SimpleParseMixin, ContextOptimizeBaseParser):
     pass
 
 
